@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import styles from './PdfDownloader.module.scss';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -11,6 +11,16 @@ import { IPricelistData, IPricelistItem, IParsedDetails } from './IPricelistData
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const headerLogo = require('../assets/header-logo.png');
+
+// Define types for SharePoint list items
+interface ISharePointListItem {
+  Title: string;
+  Description: string;
+  DescriptionRichText: string;
+}
+
+// Define type for state setters
+type StateSetter<T> = React.Dispatch<React.SetStateAction<T>>;
 
 const offerData: IOfferData = {
   sender: {
@@ -167,23 +177,23 @@ const pricelistData: IPricelistData = {
   vatInfo: 'The respective amount of VAT in accordance with legal regulations shall be added to the prices. VAT will be disclosed separately.'
 };
 
-
 const PdfDownloader: React.FC<IPdfDownloaderProps> = (): React.ReactElement<IPdfDownloaderProps> => {
-  const [isContentReady, setIsContentReady] = useState(false);
-  const [enquiry, setEnquiry] = useState<any>([]);
-  const [Price,setPrice] = useState<any>([]);
-  const [productionFacilityCables, setProductionFacilityCables] = useState<any>([]);
-  const [exportRegulations, setExportRegulations] = useState<any>([]);
-  const [delivery, setDelivery] = useState<any>([]);
-  const [deliveryPeriod, setDeliveryPeriod] = useState<any>([]);
-  const [prices1, setPrices1] = useState<any>([]);
-  const [metalAdjustment, setMetalAdjustment] = useState<any>([]);
-  const [warranty, setWarranty] = useState<any>([]);
-  const [limitationOfLiability, setLimitationOfLiability] = useState<any>([]);
-  const [validity, setValidity] = useState<any>([]);
-  const [contact, setContact] = useState<any>([]);
-  const [automatic, setAutomatic] = useState<any>([]);
-  const parsedPricelistItems = useMemo(() => {
+  const [isContentReady, setIsContentReady] = useState<boolean>(false);
+  const [enquiry, setEnquiry] = useState<ISharePointListItem[]>([]);
+  const [Price, setPrice] = useState<ISharePointListItem[]>([]);
+  const [productionFacilityCables, setProductionFacilityCables] = useState<ISharePointListItem[]>([]);
+  const [exportRegulations, setExportRegulations] = useState<ISharePointListItem[]>([]);
+  const [delivery, setDelivery] = useState<ISharePointListItem[]>([]);
+  const [deliveryPeriod, setDeliveryPeriod] = useState<ISharePointListItem[]>([]);
+  const [prices1, setPrices1] = useState<ISharePointListItem[]>([]);
+  const [metalAdjustment, setMetalAdjustment] = useState<ISharePointListItem[]>([]);
+  const [warranty, setWarranty] = useState<ISharePointListItem[]>([]);
+  const [limitationOfLiability, setLimitationOfLiability] = useState<ISharePointListItem[]>([]);
+  const [validity, setValidity] = useState<ISharePointListItem[]>([]);
+  const [contact, setContact] = useState<ISharePointListItem[]>([]);
+  const [automatic, setAutomatic] = useState<ISharePointListItem[]>([]);
+  
+  const parsedPricelistItems = useMemo((): (IPricelistItem & { parsedDetails: IParsedDetails })[] => {
     const parsedItems = originalPricelistItems.map(item => ({
       ...item,
       parsedDetails: parseDetails(item.details),
@@ -191,32 +201,13 @@ const PdfDownloader: React.FC<IPdfDownloaderProps> = (): React.ReactElement<IPdf
     return [...parsedItems, ...parsedItems, ...parsedItems];
   }, []);
 
-  useEffect(() => {
-    const img = new Image();
-    img.src = headerLogo;
-    img.onload = () => setIsContentReady(true);
-    img.onerror = () => {
-      console.error("Failed to load header logo for PDF generation.");
-      setIsContentReady(true);
-    }
-    onLoad();
-  }, []);
-
-  // const onLoad = async (): Promise<void> => {
-  //   let data = await sp.web.lists.getByTitle('OfferTemplate').items.select('*').get();
-  //   console.log('Fetched data from SharePoint list:', data);
-  //   let res = data.filter(data => data.Title == "Prices")
-  //   console.log('Filtered data for Title "Price":', res);
-  //   setPrice(res[0].Description)
-    
-  // }
-const onLoad = async (): Promise<void> => {
-try {
-      const items: { Title: string, Description: string, DescriptionRichText: string }[] = await sp.web.lists.getByTitle('OfferTemplate').items.select('Title', 'Description', 'DescriptionRichText').get();
+  // Define onLoad before using it in useEffect
+  const onLoad = useCallback(async (): Promise<void> => {
+    try {
+      const items: ISharePointListItem[] = await sp.web.lists.getByTitle('OfferTemplate').items.select('Title', 'Description', 'DescriptionRichText').get();
       console.log('Fetched data from SharePoint list:', items);
 
-      // A map for title to state setter function
-      const stateSetterMap: { [key: string]: (value: any) => void } = {
+      const stateSetterMap: Record<string, StateSetter<ISharePointListItem[]>> = {
         "Prices": setPrice,
         "Production facility cables": setProductionFacilityCables,
         "(if delivery outside of Germany) Export Regulations": setExportRegulations,
@@ -231,20 +222,32 @@ try {
         "Automatic": setAutomatic,       
         "Prices1": setPrices1,
       };
+      
       for (const item of items) {
         console.log(`Title: ${item.Title}, Description: ${item.Description}`);
         if (stateSetterMap[item.Title]) {
           stateSetterMap[item.Title]([item]);
-          
         }
       }
     } catch (error) {
       console.error("Failed to fetch data from SharePoint list:", error);
     }
-  };
+  }, []);
 
+  useEffect(() => {
+    const img = new Image();
+    img.src = headerLogo;
+    img.onload = () => setIsContentReady(true);
+    img.onerror = () => {
+      console.error("Failed to load header logo for PDF generation.");
+      setIsContentReady(true);
+    }
+    
+    // Use void operator to handle promise
+    void onLoad();
+  }, [onLoad]);
 
-  const handleDownload = React.useCallback(async (): Promise<void> => {
+  const handleDownload = useCallback(async (): Promise<void> => {
     const pdf = new jsPDF('p', 'mm', 'a4');
     const pdfWidth = pdf.internal.pageSize.getWidth();
     const pdfHeight = pdf.internal.pageSize.getHeight();
@@ -252,6 +255,9 @@ try {
     const footerHeight = 20;
     const lineHeight = 5;
     const contentWidth = pdfWidth - margin * 2;
+    const highlightColor = '#000080';
+
+    pdf.setFont('arial'); // Set default font
 
     const logoWidth = 45;
     const rightColX = pdfWidth - margin - logoWidth;
@@ -281,7 +287,7 @@ try {
       pdf.setLineWidth(0.2);
       pdf.line(margin, footerY - 4, pdfWidth - margin, footerY - 4);
 
-      pdf.setFont('helvetica', 'normal');
+      pdf.setFont('arial', 'normal');
       pdf.setFontSize(6);
       const col1X = margin;
       const col2X = margin + 65;
@@ -320,6 +326,90 @@ try {
       pdf.text('Jensen · Wilhelmus Hendrikx', col3X, y);
     };
 
+    // Helper functions for text processing
+    const stripHtml = (html: string): string => {
+      if (!html) return '';
+      const htmlWithNewlines = html.replace(/<br\s*\/?>/gi, '\n').replace(/<\/p>/gi, '\n').replace(/<\/div>/gi, '\n');
+      const doc = new DOMParser().parseFromString(htmlWithNewlines, 'text/html');
+      return doc.body.textContent || "";
+    };
+
+    const getText = (state: ISharePointListItem[]): string => {
+      if (Array.isArray(state) && state.length > 0 && state[0] && typeof state[0].Description === 'string') {
+        return stripHtml(state[0].Description);
+      }
+      return '';
+    };
+
+    // Variables for replacement - defined BEFORE replaceVars function
+    const customerName = offerData.recipient.name;
+    const supplierName = parsedPricelistItems[0]?.parsedDetails?.supplier || 'Universal Cables Ltd';
+    const deliveryTerms = 'DAP';
+    const destinationSite = 'Esposende';
+    const recipientName = offerData.recipient.name;
+    const stockItems = 'item 1.1.1 and 1.1.2 A1';
+    const stockDeliveryTime = '4 weeks';
+    const enquiryDate = offerData.body1.enquiryDate;
+    const productionItems = 'item 1.1.2';
+    const productionDeliveryTime = '34 weeks';
+    const copperPrice = "13.310,00 USD/t";
+    const exchangeRate = "1,168200";
+    const dateTodayMinus1 = "insert date: today minus 1";
+    const validityDate = "31.01.2026";
+    const contact1Name = "Senior Commercial & Tender Manager Mrs. Andrea Zedlitz";
+    const contact1Mobile = "+491736293924";
+    const contact1Email = "Andrea.Zedlitz@nkt.com";
+    const contact2Name = "Senior Technical Offer & Order Manager Mr. Oliver Sablic";
+    const contact2Mobile = "+491607479305";
+    const contact2Email = "Oliver.Sablic@nkt.com";
+
+    const replaceVars = (text: string): string => {
+      if (!text) return '';
+      return text
+        // Customer/Company variations
+        .replace(/\[customer\s*name\]/gi, customerName)
+        .replace(/\[company\s*name\]/gi, customerName)
+        // Supplier variations
+        .replace(/\[supplier\s*name\]/gi, supplierName)
+        .replace(/\[suppliername\]/gi, supplierName)
+        .replace(/\[supllier\s*name\]/gi, supplierName)
+        .replace(/\[suplliername\]/gi, supplierName)
+        // Delivery variations
+        .replace(/\[delivery\s*terms\]/gi, deliveryTerms)
+        .replace(/\[delivery\s*incoterm\]/gi, deliveryTerms)
+        .replace(/\[deliveryincoterm\]/gi, deliveryTerms)
+        // Location/Destination variations
+        .replace(/\[destination\s*site\]/gi, destinationSite)
+        .replace(/\[location\]/gi, destinationSite)
+        // Recipient/Address variations
+        .replace(/\[recipient\s*name\]/gi, recipientName)
+        .replace(/\[address\]/gi, recipientName)
+        // Stock items
+        .replace(/\[stock\s*items\]/gi, stockItems)
+        .replace(/\[stock\s*delivery\s*time\]/gi, stockDeliveryTime)
+        // Production items
+        .replace(/\[production\s*items\]/gi, productionItems)
+        .replace(/\[production\s*delivery\s*time\]/gi, productionDeliveryTime)
+        // Copper/Metal variations
+        .replace(/\[copper\s*price\]/gi, copperPrice)
+        .replace(/\[copper\s*content\]/gi, copperPrice)
+        .replace(/\[metal\s*price\]/gi, copperPrice)
+        // Exchange rate
+        .replace(/\[exchange\s*rate\]/gi, exchangeRate)
+        // Date variations
+        .replace(/\[date\s*today\s*minus\s*1\]/gi, dateTodayMinus1)
+        .replace(/\[insert\s*date\]/gi, dateTodayMinus1)
+        .replace(/\[validity\s*date\]/gi, validityDate)
+        .replace(/\[enquiry\s*date\]/gi, enquiryDate)
+        // Contact information
+        .replace(/\[contact\s*1\s*name\]/gi, contact1Name)
+        .replace(/\[contact\s*1\s*mobile\]/gi, contact1Mobile)
+        .replace(/\[contact\s*1\s*email\]/gi, contact1Email)
+        .replace(/\[contact\s*2\s*name\]/gi, contact2Name)
+        .replace(/\[contact\s*2\s*mobile\]/gi, contact2Mobile)
+        .replace(/\[contact\s*2\s*email\]/gi, contact2Email);
+    };
+
     // --- PAGE 1: OFFER DOCUMENT ---
     addPageHeader();
 
@@ -327,26 +417,27 @@ try {
     pdf.setFontSize(8);
     pdf.setTextColor(128, 128, 128);
     pdf.text(offerData.sender.line1, margin, 35);
-    pdf.setTextColor(0, 0, 0);
+    pdf.setTextColor(0, 0, 0); // Reset color
 
     // Recipient
     let y = 45;
     pdf.setFontSize(10);
-    pdf.setFont('helvetica', 'bold');
+    pdf.setFont('arial', 'bold');
     pdf.text(offerData.recipient.name, margin, y);
     y += lineHeight;
-    pdf.setFont('helvetica', 'normal');
+    pdf.setFont('arial', 'normal');
     pdf.text(offerData.recipient.address1, margin, y);
     y += lineHeight;
     pdf.text(offerData.recipient.zipCity, margin, y);
     y += lineHeight;
     pdf.text(offerData.recipient.country, margin, y);
 
-
+    // Right Column
     let rightY = margin + 20;
+    pdf.setTextColor(highlightColor); // Set color for the right column
 
     const drawRightColText = (text: string, isBold = false): void => {
-      pdf.setFont('helvetica', isBold ? 'bold' : 'normal');
+      pdf.setFont('arial', isBold ? 'bold' : 'normal');
       pdf.text(text, rightColX, rightY);
       rightY += lineHeight;
     };
@@ -355,12 +446,12 @@ try {
     drawRightColText(offerData.companyInfo.address1);
     drawRightColText(offerData.companyInfo.zipCity);
     drawRightColText(offerData.companyInfo.country);
-    rightY += lineHeight; // Spacer
+    rightY += lineHeight;
     drawRightColText(`Phone: ${offerData.companyInfo.phone}`);
     drawRightColText(`Telefax: ${offerData.companyInfo.telefax}`);
     drawRightColText(`Internet: ${offerData.companyInfo.website}`);
     drawRightColText(`E-Mail: ${offerData.companyInfo.email}`);
-    rightY += lineHeight; // Spacer
+    rightY += lineHeight;
     drawRightColText('Contact Person', true);
     drawRightColText(offerData.contactPerson.name);
     drawRightColText(`Phone: ${offerData.contactPerson.phone}`);
@@ -373,76 +464,44 @@ try {
     drawRightColText(offerData.reference.note);
 
     y = Math.max(y, rightY) + 5;
-    pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(10);
+    
+    // Date
+    pdf.setFont('georgia', 'bold');
+    pdf.setFontSize(8);
     pdf.text(offerData.date.date_value, margin, y);
     y += 5;
-    pdf.setFontSize(14);
-    pdf.setFont('helvetica', 'bold');
+
+    // Offer Title
+    pdf.setFont('georgia', 'bold');
+    pdf.setFontSize(8);
     pdf.text(offerData.offer.titlePrefix + offerData.offer.offerNumber, margin, y);
     y += 7;
-    pdf.setFontSize(10);
-    pdf.setFont('helvetica', 'normal');
+
+    // Offer Subtitle
+    pdf.setFont('georgia', 'bold');
+    pdf.setFontSize(14);
     pdf.text(offerData.offer.subtitlePrefix + offerData.offer.projectReference, margin, y);
+
+    // Reset styles for subsequent text
+    pdf.setFont('arial', 'normal');
+    pdf.setFontSize(10);
+
+    pdf.setTextColor(0, 0, 0); // Reset color for main body
 
     y += 15;
     pdf.text(offerData.greeting.salutation + offerData.greeting.recipientName, margin, y);
     y += 10;
     
-    // Helper functions for text processing
-    const stripHtml = (html: string): string => {
-      if (!html) return '';
-      // Replace common block tags with newlines to preserve spacing
-      const htmlWithNewlines = html.replace(/<br\s*\/?>/gi, '\n').replace(/<\/p>/gi, '\n').replace(/<\/div>/gi, '\n');
-      const doc = new DOMParser().parseFromString(htmlWithNewlines, 'text/html');
-      return doc.body.textContent || "";
-    };
+    const body1Text = `${offerData.body1.enquiryPrefix}${offerData.body1.enquiryDate}`;
+    const fullBodyText = `${body1Text}
 
-    const getText = (state: any): string => {
-      if (Array.isArray(state) && state.length > 0 && state[0] && typeof state[0].Description === 'string') {
-        return stripHtml(state[0].Description);
-      } else if (typeof state === 'string') {
-        return stripHtml(state);
-      }
-      return '';
-    };
+${offerData.body2}
 
-    const getRichText = (state: any): string => {
-      if (Array.isArray(state) && state.length > 0 && state[0] && typeof state[0].DescriptionRichText === 'string') {
-        return stripHtml(state[0].DescriptionRichText);
-      }
-      return '';
-    };
+${offerData.body3}`;
+    const bodyLines = pdf.splitTextToSize(fullBodyText, contentWidth);
+    pdf.text(bodyLines, margin, y);
+    y += bodyLines.length * lineHeight;
 
-    const replaceVars = (text: string): string => {
-      if (!text) return '';
-      return text
-        .replace(/\$\{customerName\}/g, customerName)
-        .replace(/\$\{supplierName\}/g, supplierName)
-        .replace(/\$\{deliveryTerms\}/g, deliveryTerms)
-        .replace(/\$\{destinationSite\}/g, destinationSite)
-        .replace(/\$\{recipientName\}/g, recipientName)
-        .replace(/\$\{stockItems\}/g, stockItems)
-        .replace(/\$\{stockDeliveryTime\}/g, stockDeliveryTime)
-        .replace(/\$\{productionItems\}/g, productionItems)
-        .replace(/\$\{productionDeliveryTime\}/g, productionDeliveryTime)
-        .replace(/\$\{copperPrice\}/g, copperPrice)
-        .replace(/\$\{exchangeRate\}/g, exchangeRate)
-        .replace(/\$\{dateTodayMinus1\}/g, dateTodayMinus1)
-        .replace(/\$\{validityDate\}/g, validityDate)
-        .replace(/\$\{contact1Name\}/g, contact1Name)
-        .replace(/\$\{contact1Mobile\}/g, contact1Mobile)
-        .replace(/\$\{contact1Email\}/g, contact1Email)
-        .replace(/\$\{contact2Name\}/g, contact2Name)
-        .replace(/\$\{contact2Mobile\}/g, contact2Mobile)
-        .replace(/\$\{contact2Email\}/g, contact2Email)
-        .replace(/\$\{enquiryDate\}/g, enquiryDate);
-    };
-    
-    const enquiryContent = replaceVars(getText(enquiry));
-    const enquiryLines = pdf.splitTextToSize(enquiryContent, contentWidth);
-    pdf.text(enquiryLines, margin, y);
-    y += enquiryLines.length * lineHeight;
     y += 5;
     offerData.items.forEach(item => {
       y += 5;
@@ -451,22 +510,26 @@ try {
 
     // --- PAGE 2: TABLE OF CONTENTS ---
     pdf.addPage();
-    pdf.setFont('helvetica', 'bold');
+    pdf.setFont('arial', 'bold');
     pdf.setFontSize(16);
     pdf.text("Table of contents", margin, margin + 15);
     autoTable(pdf, {
       head: [['S.No', 'Title', 'Page No']],
       body: tocItems.map(item => [item.no, item.title, item.page]),
       startY: margin + 25,
-      headStyles: { fontStyle: 'bold', fillColor: [230, 230, 230], textColor: [0, 0, 0] },
+      headStyles: { fontStyle: 'bold', fillColor: [230, 230, 230], textColor: [0, 0, 0], font: 'arial' },
+      styles: { font: 'arial' },
       didDrawPage: (data) => addPageHeader()
     });
 
-    // --- PAGE 3+: PRICELIST ---
+    // --- PAGE 3: PRICELIST ---
     pdf.addPage();
-    pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(16);
+    pdf.setFont('georgia', 'bold');
+    pdf.setFontSize(14);
+    pdf.setTextColor(highlightColor);
     pdf.text(pricelistData.title, margin, margin + 15);
+    pdf.setTextColor(0, 0, 0); // Reset color
+    pdf.setFont('arial', 'normal'); // Reset font
 
     const totalSum = parsedPricelistItems.reduce((sum, item) => {
       if (!item.total) return sum;
@@ -501,8 +564,8 @@ try {
       theme: 'grid',
       startY: margin + 25,
       margin: { top: 40, bottom: 30, left: margin, right: margin },
-      headStyles: { fontStyle: 'bold', fillColor: [255, 255, 255], textColor: [0, 0, 0], lineWidth: 0.1, lineColor: [0, 0, 0] },
-      styles: { lineColor: [0, 0, 0], lineWidth: 0.1, textColor: [0, 0, 0] },
+      headStyles: { fontStyle: 'bold', fillColor: [255, 255, 255], textColor: [0, 0, 0], lineWidth: 0.1, lineColor: [0, 0, 0], font: 'arial' },
+      styles: { lineColor: [0, 0, 0], lineWidth: 0.1, textColor: [0, 0, 0], font: 'arial' },
       didDrawPage: (data) => addPageHeader(),
       columnStyles: {
         3: { halign: 'right' },
@@ -513,145 +576,190 @@ try {
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const finalY = (pdf as any).lastAutoTable.finalY;
-    pdf.setFont('helvetica', 'normal');
+    pdf.setFont('arial', 'normal');
     pdf.setFontSize(10);
     pdf.text(pricelistData.vatInfo, margin, finalY + 10, { maxWidth: pdfWidth - margin * 2 });
 
-    // --- ADDITIONAL CONTENT PAGES ---
+    // --- PAGE 4 AND BEYOND: ADDITIONAL CONTENT ---
     pdf.addPage();
     addPageHeader();
 
     let currentY = margin + 25;
 
+    // Helper function for section titles
     const addSectionTitle = (num: string, title: string): void => {
-      pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(11);
-      if (currentY + 10 > pdfHeight - footerHeight - 10) {
+      // Check if we need a new page BEFORE adding the title
+      if (currentY > pdfHeight - footerHeight - 25) {
         pdf.addPage();
         addPageHeader();
         currentY = margin + 25;
       }
+      
+      pdf.setFont('georgia', 'bold');
+      pdf.setFontSize(12);
+      pdf.setTextColor(highlightColor);
       pdf.text(`${num} ${title}`, margin, currentY);
+      pdf.setTextColor(0, 0, 0); // Reset color
       currentY += 7;
     };
 
-    const addParagraph = (num: string, text: string, align: 'left' | 'justify' = 'justify', fontWeight: 'normal' | 'bold' = 'normal'): void => {
-      pdf.setFont('helvetica', fontWeight);
-      pdf.setFontSize(10);
-
-      const fullText = num ? `${num}        ${text}` : text;
-      const lines = pdf.splitTextToSize(fullText, contentWidth);
-      const height = lines.length * 4.5;
-
-      if (currentY + height > pdfHeight - footerHeight - 10) {
+    // Helper function to add content with proper flow
+    const addContent = (text: string): void => {
+      if (!text) return;
+      
+      pdf.setFont('arial', 'normal');
+      pdf.setFontSize(9);
+      
+      const lines = pdf.splitTextToSize(text, contentWidth);
+      const lineHeight_px = 4.5;
+      const paragraphHeight = lines.length * lineHeight_px;
+      
+      // Check if we need a new page for this content
+      if (currentY + paragraphHeight > pdfHeight - footerHeight - 15) {
         pdf.addPage();
         addPageHeader();
         currentY = margin + 25;
       }
-
-      pdf.text(lines, margin, currentY, { align: align, maxWidth: contentWidth });
-      currentY += height + 1;
+      
+      // Write the content
+      for (let i = 0; i < lines.length; i++) {
+        pdf.text(lines[i], margin, currentY + (i * lineHeight_px));
+      }
+      
+      currentY += paragraphHeight + 2;
     };
 
-    const customerName = offerData.recipient.name;
-    const supplierName = parsedPricelistItems[0]?.parsedDetails?.supplier || 'Universal Cables Ltd';
-    const deliveryTerms = 'DAP';
-    const destinationSite = 'Esposende';
-    const recipientName = offerData.recipient.name;
-    const stockItems = 'item 1.1.1 and 1.1.2 A1';
-    const stockDeliveryTime = '4 weeks';
-    const enquiryDate = offerData.body1.enquiryDate;
-    const productionItems = 'item 1.1.2';
-    const productionDeliveryTime = '34 weeks';
-    const copperPrice = "13.310,00 USD/t";
-    const exchangeRate = "1,168200";
-    const dateTodayMinus1 = "insert date: today minus 1";
-    const validityDate = "31.01.2026";
-    const contact1Name = "Senior Commercial & Tender Manager Mrs. Andrea Zedlitz";
-    const contact1Mobile = "+491736293924";
-    const contact1Email = "Andrea.Zedlitz@nkt.com";
-    const contact2Name = "Senior Technical Offer & Order Manager Mr. Oliver Sablic";
-    const contact2Mobile = "+491607479305";
-    const contact2Email = "Oliver.Sablic@nkt.com";
-
+    // Section 2: Prices
     addSectionTitle('2.', 'Prices');
     const priceContent = replaceVars(getText(Price));
-    if (priceContent) addParagraph('', priceContent);
+    if (priceContent) addContent(priceContent);
 
-    currentY += 1;
-
+    // Section 3: Production facility cables
     addSectionTitle('3.', 'Production facility cables');
     const prodContent = replaceVars(getText(productionFacilityCables));
-    if (prodContent) addParagraph('', prodContent);
+    if (prodContent) addContent(prodContent);
 
-    currentY += 1;
-
+    // Section 4: Export Regulations
     addSectionTitle('4.', '(if delivery outside of Germany) Export Regulations');
     const exportContent = replaceVars(getText(exportRegulations));
-    if (exportContent) addParagraph('', exportContent);
+    if (exportContent) addContent(exportContent);
 
-    currentY += 1;
-
+    // Section 5: Delivery
     addSectionTitle('5.', 'Delivery');
     const deliveryContent = replaceVars(getText(delivery));
-    if (deliveryContent) addParagraph('', deliveryContent);
+    if (deliveryContent) addContent(deliveryContent);
 
-    currentY += 1;
-
+    // Section 6: Delivery period
     addSectionTitle('6.', 'Delivery period');
     const deliveryPeriodContent = replaceVars(getText(deliveryPeriod));
-    if (deliveryPeriodContent) addParagraph('', deliveryPeriodContent);
+    if (deliveryPeriodContent) addContent(deliveryPeriodContent);
 
-    currentY += 1;
-
+    // Section 7: Prices
     addSectionTitle('7.', 'Prices');
     const prices1Content = replaceVars(getText(prices1));
-    if (prices1Content) addParagraph('', prices1Content);
+    if (prices1Content) addContent(prices1Content);
 
-    currentY += 1;
-
+    // Section 8: Terms of payment
     addSectionTitle('8.', 'Terms of payment');
-    addParagraph('', "If Internal: 30 days after delivery.\nIf Intercompany: According to the Intercompany Settlement.\nIf External: Needs to be defined.", 'left');
+    
+    // Special handling for Terms of payment with italic keys
+    if (currentY > pdfHeight - footerHeight - 25) {
+      pdf.addPage();
+      addPageHeader();
+      currentY = margin + 25;
+    }
+    
+    pdf.setFont('arial', 'italic');
+    pdf.setFontSize(9);
+    pdf.text('If Internal:', margin, currentY);
+    pdf.setFont('arial', 'normal');
+    pdf.text(' 30 days after delivery.', margin + pdf.getTextWidth('If Internal:'), currentY);
+    currentY += 4.5;
+    
+    pdf.setFont('arial', 'italic');
+    pdf.text('If Intercompany:', margin, currentY);
+    pdf.setFont('arial', 'normal');
+    pdf.text(' According to the Intercompany Settlement.', margin + pdf.getTextWidth('If Intercompany:'), currentY);
+    currentY += 4.5;
+    
+    pdf.setFont('arial', 'italic');
+    pdf.text('If External:', margin, currentY);
+    pdf.setFont('arial', 'normal');
+    pdf.text(' Needs to be defined.', margin + pdf.getTextWidth('If External:'), currentY);
+    currentY += 6.5;
 
-    currentY += 1;
-
+    // Section 9: Metal Adjustment
     addSectionTitle('9.', 'Metal Adjustment');
     const metalContent = replaceVars(getText(metalAdjustment));
-    if (metalContent) addParagraph('', metalContent);
+    if (metalContent) {
+      // Split metal content into paragraphs for better flow
+      const paragraphs = metalContent.split('\n\n');
+      for (const paragraph of paragraphs) {
+        if (paragraph.trim()) {
+          addContent(paragraph);
+        }
+      }
+    }
 
-    currentY += 1;
-
+    // Section 10: Warranty
     addSectionTitle('10.', 'Warranty');
     const warrantyContent = replaceVars(getText(warranty));
-    if (warrantyContent) addParagraph('', warrantyContent);
+    if (warrantyContent) addContent(warrantyContent);
 
-    currentY += 1;
-
+    // Section 11: Limitation of Liability
     addSectionTitle('11.', 'Limitation of Liability');
     const liabilityContent = replaceVars(getText(limitationOfLiability));
-    if (liabilityContent) addParagraph('', liabilityContent);
+    if (liabilityContent) {
+      // Split liability content into paragraphs
+      const paragraphs = liabilityContent.split('\n\n');
+      for (const paragraph of paragraphs) {
+        if (paragraph.trim()) {
+          addContent(paragraph);
+        }
+      }
+    }
 
-    currentY += 1;
-
+    // Section 12: Validity
     addSectionTitle('12.', 'Validity');
     const validityContent = replaceVars(getText(validity));
-    if (validityContent) addParagraph('', validityContent);
+    if (validityContent) addContent(validityContent);
 
-    currentY += 1;
-
+    // Section 13: Contact
     addSectionTitle('13.', 'Contact');
     const contactContent = replaceVars(getText(contact));
-    if (contactContent) addParagraph('', contactContent);
+    if (contactContent) {
+      // Split contact content into paragraphs
+      const paragraphs = contactContent.split('\n\n');
+      for (const paragraph of paragraphs) {
+        if (paragraph.trim()) {
+          addContent(paragraph);
+        }
+      }
+    }
 
-    const automaticRichContent = replaceVars(getRichText(automatic));
-    if (automaticRichContent) addParagraph('', automaticRichContent, 'left', 'bold');
-
-    currentY += 20;
-
+    // Automatic content
     const automaticContent = replaceVars(getText(automatic));
-    if (automaticContent) addParagraph('', automaticContent);
+    if (automaticContent) {
+      // Check if we need a new page
+      if (currentY > pdfHeight - footerHeight - 25) {
+        pdf.addPage();
+        addPageHeader();
+        currentY = margin + 25;
+      }
+      addContent(automaticContent);
+    }
+
+    // Best wishes - add with proper spacing
+    if (currentY > pdfHeight - footerHeight - 20) {
+      pdf.addPage();
+      addPageHeader();
+      currentY = margin + 25;
+    }
+    
+    addContent("Best wishes from the NKT team.");
+    addContent("This offer was automatically created and is valid without signature.");
+
     // Add footers to all pages
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const totalPages = (pdf as any).internal.getNumberOfPages();
     pdf.setPage(1);
     addPage1Footer(totalPages);
