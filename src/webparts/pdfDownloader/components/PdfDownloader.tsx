@@ -257,7 +257,7 @@ const PdfDownloader: React.FC<IPdfDownloaderProps> = (): React.ReactElement<IPdf
     const contentWidth = pdfWidth - margin * 2;
     const highlightColor = '#000080';
 
-    pdf.setFont('arial'); // Set default font
+    pdf.setFont('helvetica'); // Set default font
 
     const logoWidth = 45;
     const rightColX = pdfWidth - margin - logoWidth;
@@ -287,7 +287,7 @@ const PdfDownloader: React.FC<IPdfDownloaderProps> = (): React.ReactElement<IPdf
       pdf.setLineWidth(0.2);
       pdf.line(margin, footerY - 4, pdfWidth - margin, footerY - 4);
 
-      pdf.setFont('arial', 'normal');
+      pdf.setFont('helvetica', 'normal');
       pdf.setFontSize(6);
       const col1X = margin;
       const col2X = margin + 65;
@@ -342,6 +342,13 @@ const PdfDownloader: React.FC<IPdfDownloaderProps> = (): React.ReactElement<IPdf
       return '';
     };
 
+    const getRichText = (state: ISharePointListItem[]): string => {
+      if (Array.isArray(state) && state.length > 0 && state[0] && typeof state[0].DescriptionRichText === 'string') {
+        return stripHtml(state[0].DescriptionRichText);
+      }
+      return '';
+    };
+
     // Variables for replacement - defined BEFORE replaceVars function
     const customerName = offerData.recipient.name;
     const supplierName = parsedPricelistItems[0]?.parsedDetails?.supplier || 'Universal Cables Ltd';
@@ -366,7 +373,11 @@ const PdfDownloader: React.FC<IPdfDownloaderProps> = (): React.ReactElement<IPdf
 
     const replaceVars = (text: string): string => {
       if (!text) return '';
-      return text
+
+      // Special handling to ensure email is on a new line after mobile
+      const processedText = text.replace(/(\[contact\s*\d\s*mobile\])\s*(\[contact\s*\d\s*email\])/gi, '$1\n$2');
+
+      return processedText
         // Customer/Company variations
         .replace(/\[customer\s*name\]/gi, customerName)
         .replace(/\[company\s*name\]/gi, customerName)
@@ -423,10 +434,10 @@ const PdfDownloader: React.FC<IPdfDownloaderProps> = (): React.ReactElement<IPdf
     // Recipient
     let y = 45;
     pdf.setFontSize(10);
-    pdf.setFont('arial', 'bold');
+    pdf.setFont('helvetica', 'bold');
     pdf.text(offerData.recipient.name, margin, y);
     y += lineHeight;
-    pdf.setFont('arial', 'normal');
+    pdf.setFont('helvetica', 'normal');
     pdf.text(offerData.recipient.address1, margin, y);
     y += lineHeight;
     pdf.text(offerData.recipient.zipCity, margin, y);
@@ -438,7 +449,7 @@ const PdfDownloader: React.FC<IPdfDownloaderProps> = (): React.ReactElement<IPdf
     pdf.setTextColor(highlightColor); // Set color for the right column
 
     const drawRightColText = (text: string, isBold = false): void => {
-      pdf.setFont('arial', isBold ? 'bold' : 'normal');
+      pdf.setFont('helvetica', isBold ? 'bold' : 'normal');
       pdf.text(text, rightColX, rightY);
       rightY += lineHeight;
     };
@@ -484,7 +495,7 @@ const PdfDownloader: React.FC<IPdfDownloaderProps> = (): React.ReactElement<IPdf
     pdf.text(offerData.offer.subtitlePrefix + offerData.offer.projectReference, margin, y);
 
     // Reset styles for subsequent text
-    pdf.setFont('arial', 'normal');
+    pdf.setFont('helvetica', 'normal');
     pdf.setFontSize(10);
 
     pdf.setTextColor(0, 0, 0); // Reset color for main body
@@ -522,15 +533,15 @@ ${offerData.body3}`;
 
     // --- PAGE 2: TABLE OF CONTENTS ---
     pdf.addPage();
-    pdf.setFont('arial', 'bold');
+    pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(16);
     pdf.text("Table of contents", margin, margin + 15);
     autoTable(pdf, {
       head: [['S.No', 'Title', 'Page No']],
       body: tocItems.map(item => [item.no, item.title, item.page]),
       startY: margin + 25,
-      headStyles: { fontStyle: 'bold', fillColor: [230, 230, 230], textColor: [0, 0, 0], font: 'arial' },
-      styles: { font: 'arial' },
+      headStyles: { fontStyle: 'bold', fillColor: [230, 230, 230], textColor: [0, 0, 0], font: 'helvetica' },
+      styles: { font: 'helvetica' },
       didDrawPage: (data) => addPageHeader()
     });
 
@@ -541,7 +552,7 @@ ${offerData.body3}`;
     pdf.setTextColor(highlightColor);
     pdf.text(pricelistData.title, margin, margin + 15);
     pdf.setTextColor(0, 0, 0); // Reset color
-    pdf.setFont('arial', 'normal'); // Reset font
+    pdf.setFont('helvetica', 'normal'); // Reset font
 
     const totalSum = parsedPricelistItems.reduce((sum, item) => {
       if (!item.total) return sum;
@@ -576,8 +587,8 @@ ${offerData.body3}`;
       theme: 'grid',
       startY: margin + 25,
       margin: { top: 40, bottom: 30, left: margin, right: margin },
-      headStyles: { fontStyle: 'bold', fillColor: [255, 255, 255], textColor: [0, 0, 0], lineWidth: 0.1, lineColor: [0, 0, 0], font: 'arial' },
-      styles: { lineColor: [0, 0, 0], lineWidth: 0.1, textColor: [0, 0, 0], font: 'arial' },
+      headStyles: { fontStyle: 'bold', fillColor: [255, 255, 255], textColor: [0, 0, 0], lineWidth: 0.1, lineColor: [0, 0, 0], font: 'helvetica' },
+      styles: { lineColor: [0, 0, 0], lineWidth: 0.1, textColor: [0, 0, 0], font: 'helvetica' },
       didDrawPage: (data) => addPageHeader(),
       columnStyles: {
         3: { halign: 'right' },
@@ -588,7 +599,7 @@ ${offerData.body3}`;
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const finalY = (pdf as any).lastAutoTable.finalY;
-    pdf.setFont('arial', 'normal');
+    pdf.setFont('helvetica', 'normal');
     pdf.setFontSize(10);
     pdf.text(pricelistData.vatInfo, margin, finalY + 10, { maxWidth: pdfWidth - margin * 2 });
 
@@ -616,61 +627,111 @@ ${offerData.body3}`;
     };
 
     // Helper function to add content with proper flow and basic list formatting
-    const addContent = (text: string): void => {
+    const addContent = (text: string, leftOffset: number = 0): void => {
       if (!text) return;
 
-      pdf.setFont('arial', 'normal');
+      pdf.setFont('helvetica', 'normal');
       pdf.setFontSize(10);
 
-      // split into paragraphs on any newline; individual numbered or bullet
-      // lines come through as their own paragraph so we can indent/space them
-      const paragraphs = text.split(/\n+/);
+      const currentMargin = margin + leftOffset;
+      const currentContentWidth = contentWidth - leftOffset;
+
+      // split on blank lines (double newlines) to get main paragraph blocks
+      const mainParagraphs = text.split(/\n\s*\n/);
       const lineHeight_px = 4.5;
 
-      paragraphs.forEach(paragraph => {
-        if (!paragraph.trim()) {
+      mainParagraphs.forEach((mainPara) => {
+        if (!mainPara.trim()) {
           currentY += lineHeight_px; // preserve empty lines
           return;
         }
 
-        // detect a leading numbering such as "2.1 " or "10.2 " or a bullet character
-        const bulletMatch = paragraph.match(/^((?:[0-9]{1,2}\.[0-9]{1,2})|•)\s+/);
-        let indent = 0;
-        let body = paragraph;
-        if (bulletMatch) {
-          indent = pdf.getTextWidth(bulletMatch[1]);
-          body = paragraph.slice(bulletMatch[1].length);
-        }
+        // split by single newlines to check for continuations
+        const rawLines = mainPara.split(/\n/);
+        let processedLines: string[] = [];
 
-        const width = contentWidth - indent;
-        const lines = pdf.splitTextToSize(body, width);
-        const paragraphHeight = lines.length * lineHeight_px;
+        // rejoin lines that are continuations (not starting with a number or bullet)
+        for (let i = 0; i < rawLines.length; i++) {
+          const line = rawLines[i].trim();
+          if (!line) continue; // skip empty lines
 
-        // page break check
-        if (currentY + paragraphHeight > pdfHeight - footerHeight - 15) {
-          pdf.addPage();
-          addPageHeader();
-          currentY = margin + 25;
-        }
+          // check if this line starts a new numbered section
+          const startsNewSection = /^[0-9]{1,2}\.[0-9]{1,2}\s+/.test(line);
 
-        // write the lines, applying indent to wrapped lines and keeping the
-        // bullet prefix on the first line
-        if (bulletMatch) {
-          // first line includes the bullet prefix and is left-aligned
-          pdf.text(bulletMatch[1] + lines[0], margin, currentY, { align: 'left', maxWidth: contentWidth });
-          let yOffset = lineHeight_px;
-          for (let i = 1; i < lines.length; i++) {
-            pdf.text(lines[i], margin + indent, currentY + yOffset, { align: 'justify', maxWidth: width });
-            yOffset += lineHeight_px;
+          if (i === 0 || startsNewSection) {
+            // start a new paragraph
+            processedLines.push(line);
+          } else {
+            // continuation of previous paragraph - join with space
+            if (processedLines.length > 0) {
+              processedLines[processedLines.length - 1] += ' ' + line;
+            } else {
+              processedLines.push(line);
+            }
           }
-        } else {
-          // no bullet, justify entire paragraph
-          pdf.text(lines, margin, currentY, { align: 'justify', maxWidth: contentWidth });
         }
 
-        currentY += paragraphHeight;
-        // add a bit of extra spacing after each paragraph/bullet group
-        currentY += bulletMatch ? 4 : 2;
+        // now process each logical paragraph
+        processedLines.forEach((paragraph) => {
+          if (!paragraph.trim()) return;
+
+          // detect a leading numbering such as "2.1 " or "10.2 " or a bullet character
+          const bulletMatch = paragraph.match(/^((?:[0-9]{1,2}\.[0-9]{1,2})|•)\s+/);
+          let indent = 0;
+          let body = paragraph;
+          if (bulletMatch) {
+            indent = pdf.getTextWidth(bulletMatch[1]);
+            body = paragraph.slice(bulletMatch[1].length);
+          }
+
+          const width = currentContentWidth - indent;
+          const lines = pdf.splitTextToSize(body, width);
+          const paragraphHeight = lines.length * lineHeight_px;
+
+          // page break check
+          if (currentY + paragraphHeight > pdfHeight - footerHeight - 15) {
+            pdf.addPage();
+            addPageHeader();
+            currentY = margin + 25;
+          }
+
+          // write the lines, applying indent to wrapped lines and keeping the
+          // bullet prefix on the first line
+          if (bulletMatch) {
+            // first line includes the bullet prefix
+            const firstLine = bulletMatch[1] + lines[0];
+            
+            if (lines.length > 1) {
+              // Force justify first line
+              pdf.text([firstLine, ''], currentMargin, currentY, { align: 'justify', maxWidth: currentContentWidth });
+              
+              // Middle lines - force justify
+              for (let i = 1; i < lines.length - 1; i++) {
+                pdf.text([lines[i], ''], currentMargin + indent, currentY + (i * lineHeight_px), { align: 'justify', maxWidth: width });
+              }
+              // Last line - normal justify (left align)
+              pdf.text(lines[lines.length - 1], currentMargin + indent, currentY + ((lines.length - 1) * lineHeight_px), { align: 'justify', maxWidth: width });
+            } else {
+              pdf.text(firstLine, currentMargin, currentY, { align: 'justify', maxWidth: currentContentWidth });
+            }
+          } else {
+            // no bullet, justify entire paragraph
+            if (lines.length > 1) {
+              // Force justify all but last
+              for (let i = 0; i < lines.length - 1; i++) {
+                pdf.text([lines[i], ''], currentMargin, currentY + (i * lineHeight_px), { align: 'justify', maxWidth: currentContentWidth });
+              }
+              // Last line
+              pdf.text(lines[lines.length - 1], currentMargin, currentY + ((lines.length - 1) * lineHeight_px), { align: 'justify', maxWidth: currentContentWidth });
+            } else {
+              pdf.text(lines[0], currentMargin, currentY, { align: 'justify', maxWidth: currentContentWidth });
+            }
+          }
+
+          currentY += paragraphHeight;
+          // add spacing after each paragraph/bullet group
+          currentY += bulletMatch ? 4 : 2;
+        });
       });
     };
 
@@ -713,38 +774,156 @@ ${offerData.body3}`;
       addPageHeader();
       currentY = margin + 25;
     }
-    
-    pdf.setFont('arial', 'italic');
-    pdf.setFontSize(9);
-    pdf.text('If Internal:', margin, currentY);
-    pdf.setFont('arial', 'normal');
-    pdf.text(' 30 days after delivery.', margin + pdf.getTextWidth('If Internal:'), currentY);
-    currentY += 4.5;
-    
-    pdf.setFont('arial', 'italic');
-    pdf.text('If Intercompany:', margin, currentY);
-    pdf.setFont('arial', 'normal');
-    pdf.text(' According to the Intercompany Settlement.', margin + pdf.getTextWidth('If Intercompany:'), currentY);
-    currentY += 4.5;
-    
-    pdf.setFont('arial', 'italic');
-    pdf.text('If External:', margin, currentY);
-    pdf.setFont('arial', 'normal');
-    pdf.text(' Needs to be defined.', margin + pdf.getTextWidth('If External:'), currentY);
-    currentY += 6.5;
 
-    // Section 9: Metal Adjustment
-    addSectionTitle('9.', 'Metal Adjustment');
-    const metalContent = replaceVars(getText(metalAdjustment));
-    if (metalContent) {
-      // Split metal content into paragraphs for better flow
-      const paragraphs = metalContent.split('\n\n');
-      for (const paragraph of paragraphs) {
-        if (paragraph.trim()) {
-          addContent(paragraph);
+    const addPaymentTerm = (label: string, text: string): void => {
+      pdf.setFont('helvetica', 'italic');
+      pdf.text(label, margin, currentY);
+      const labelWidth = pdf.getTextWidth(label);
+      
+      pdf.setFont('helvetica', 'normal');
+      const textX = margin + labelWidth;
+      const availableWidth = contentWidth - labelWidth;
+      const lines = pdf.splitTextToSize(text, availableWidth);
+      
+      if (lines.length > 0) {
+        if (lines.length > 1) {
+          pdf.text([lines[0], ''], textX, currentY, { align: 'justify', maxWidth: availableWidth });
+          for (let i = 1; i < lines.length - 1; i++) {
+            pdf.text([lines[i], ''], textX, currentY + (i * 4.5), { align: 'justify', maxWidth: availableWidth });
+          }
+          pdf.text(lines[lines.length - 1], textX, currentY + ((lines.length - 1) * 4.5), { align: 'justify', maxWidth: availableWidth });
+        } else {
+          pdf.text(lines[0], textX, currentY, { align: 'justify', maxWidth: availableWidth });
         }
       }
+      currentY += Math.max(1, lines.length) * 4.5 + 2;
+    };
+
+    addPaymentTerm('If Internal:', ' 30 days after delivery.');
+    addPaymentTerm('If Intercompany:', ' According to the Intercompany Settlement.');
+    addPaymentTerm('If External:', ' Needs to be defined.');
+
+    // Section 9: Metal Adjustment
+addSectionTitle('9.', 'Metal Adjustment');
+const metalContent = replaceVars(getText(metalAdjustment));
+
+if (metalContent) {
+
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(10);
+
+  const lines = metalContent.split('\n');
+  const lineHeight_px = 4.5;
+
+  const numberColumnWidth = 9;        // was 12
+  const keyColumnWidth = 20;          // was 25
+  const valueColumnX = margin + 32;   // was 40
+
+  lines.forEach(rawLine => {
+
+    const line = rawLine.trim();
+
+    if (!line) {
+      currentY += lineHeight_px;
+      return;
     }
+
+    // Page break safety
+    if (currentY > pdfHeight - footerHeight - 20) {
+      pdf.addPage();
+      addPageHeader();
+      currentY = margin + 25;
+    }
+
+    // 1️⃣ Handle numbering (9.1, 9.2 etc.)
+    const numberMatch = line.match(/^9\.\d+/);
+
+    if (numberMatch) {
+
+      const numberText = numberMatch[0];
+      const paragraphText = line.replace(numberText, '').trim();
+
+      pdf.text(numberText, margin, currentY);
+
+      const wrapped = pdf.splitTextToSize(
+        paragraphText,
+        contentWidth - numberColumnWidth
+      );
+
+      pdf.text(
+        wrapped,
+        margin + numberColumnWidth,
+        currentY,
+        { align: 'justify', maxWidth: contentWidth - numberColumnWidth }
+      );
+
+      currentY += wrapped.length * lineHeight_px + 2;
+      return;
+    }
+
+    // 2️⃣ Handle centered formula
+    if (line.startsWith('PD =')) {
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(line, pdfWidth / 2, currentY, { align: 'left' });
+      pdf.setFont('helvetica', 'normal');
+      currentY += lineHeight_px + 3;
+      return;
+    }
+
+    // 3️⃣ Handle key-value definitions (PD:, M1Cu:, etc.)
+    const definitionMatch = line.match(/^(PD|M1Cu|M2Cu|FCu):/);
+
+    if (definitionMatch) {
+
+      const parts = line.split(':');
+      const key = parts[0] + ':';
+      const value = parts.slice(1).join(':').trim();
+
+      pdf.text(key, margin + 10, currentY);
+
+      const wrapped = pdf.splitTextToSize(
+        value,
+        contentWidth - keyColumnWidth
+      );
+
+      pdf.text(
+        wrapped,
+        valueColumnX,
+        currentY,
+        { align: 'left', maxWidth: contentWidth - keyColumnWidth }
+      );
+
+      currentY += wrapped.length * lineHeight_px;
+      return;
+    }
+
+    // 4️⃣ Handle Copper price line
+    if (line.startsWith('Copper (M1Cu)')) {
+
+      const parts = line.split(':');
+      const left = parts[0] + ':';
+      const right = parts.slice(1).join(':').trim();
+
+      pdf.text(left, margin + 12, currentY);
+      pdf.text(right, margin + 55, currentY);
+
+      currentY += lineHeight_px + 1;
+      return;
+    }
+
+    // 5️⃣ Default justified paragraph
+    const wrapped = pdf.splitTextToSize(line, contentWidth);
+
+    pdf.text(
+      wrapped,
+      margin,
+      currentY,
+      { align: 'justify', maxWidth: contentWidth }
+    );
+
+    currentY += wrapped.length * lineHeight_px + 2;
+  });
+}
 
     // Section 10: Warranty
     addSectionTitle('10.', 'Warranty');
@@ -774,35 +953,45 @@ ${offerData.body3}`;
     const contactContent = replaceVars(getText(contact));
     if (contactContent) {
       // Split contact content into paragraphs
+      const contactIndent = pdf.getTextWidth('13. ');
       const paragraphs = contactContent.split('\n\n');
       for (const paragraph of paragraphs) {
         if (paragraph.trim()) {
-          addContent(paragraph);
+          addContent(paragraph, contactIndent);
         }
       }
     }
 
     // Automatic content
-    const automaticContent = replaceVars(getText(automatic));
+    const automaticContent = replaceVars(getRichText(automatic));
     if (automaticContent) {
-      // Check if we need a new page
-      if (currentY > pdfHeight - footerHeight - 25) {
-        pdf.addPage();
-        addPageHeader();
-        currentY = margin + 25;
-      }
-      addContent(automaticContent);
-    }
+      const lines = automaticContent.split('\n').filter(line => line.trim() !== '');
+      const bestWishesLine = lines.find(line => line.includes("Best wishes"));
+      const disclaimerLine = lines.find(line => line.includes("automatically created"));
 
-    // Best wishes - add with proper spacing
-    if (currentY > pdfHeight - footerHeight - 20) {
-      pdf.addPage();
-      addPageHeader();
-      currentY = margin + 25;
+      // Render "Best wishes" if found, then increment currentY
+      if (bestWishesLine) {
+        if (currentY > pdfHeight - footerHeight - 25) { // page break check
+          pdf.addPage();
+          addPageHeader();
+          currentY = margin + 25;
+        }
+        pdf.setFont('helvetica', 'bold');
+        pdf.text(bestWishesLine, margin, currentY);
+        currentY += 5; // spacing after
+        pdf.setFont('helvetica', 'normal');
+      }
+
+      // Render disclaimer at the bottom of the current or a new page
+      if (disclaimerLine) { 
+        const disclaimerY = pdfHeight - 40; // Moved up by approximately 3 steps (15mm)
+        if (currentY > disclaimerY - 5) { // check if content overlaps disclaimer position
+          pdf.addPage();
+          addPageHeader();
+        }
+        pdf.text(disclaimerLine, margin, disclaimerY);
+      }
     }
-    
-    addContent("Best wishes from the NKT team.");
-    addContent("This offer was automatically created and is valid without signature.");
 
     // Add footers to all pages
     const totalPages = (pdf as any).internal.getNumberOfPages();
@@ -835,5 +1024,4 @@ ${offerData.body3}`;
     </section>
   );
 };
-
 export default PdfDownloader;
