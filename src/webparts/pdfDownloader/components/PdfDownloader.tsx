@@ -323,9 +323,11 @@ try {
     // --- PAGE 1: OFFER DOCUMENT ---
     addPageHeader();
 
-    // Sender line
+    // Sender line - gray color
     pdf.setFontSize(8);
+    pdf.setTextColor(128, 128, 128);
     pdf.text(offerData.sender.line1, margin, 35);
+    pdf.setTextColor(0, 0, 0);
 
     // Recipient
     let y = 45;
@@ -388,18 +390,26 @@ try {
     y += 10;
     
     // Helper functions for text processing
+    const stripHtml = (html: string): string => {
+      if (!html) return '';
+      // Replace common block tags with newlines to preserve spacing
+      const htmlWithNewlines = html.replace(/<br\s*\/?>/gi, '\n').replace(/<\/p>/gi, '\n').replace(/<\/div>/gi, '\n');
+      const doc = new DOMParser().parseFromString(htmlWithNewlines, 'text/html');
+      return doc.body.textContent || "";
+    };
+
     const getText = (state: any): string => {
       if (Array.isArray(state) && state.length > 0 && state[0] && typeof state[0].Description === 'string') {
-        return state[0].Description;
+        return stripHtml(state[0].Description);
       } else if (typeof state === 'string') {
-        return state;
+        return stripHtml(state);
       }
       return '';
     };
 
     const getRichText = (state: any): string => {
       if (Array.isArray(state) && state.length > 0 && state[0] && typeof state[0].DescriptionRichText === 'string') {
-        return state[0].DescriptionRichText;
+        return stripHtml(state[0].DescriptionRichText);
       }
       return '';
     };
@@ -529,10 +539,9 @@ try {
       pdf.setFont('helvetica', fontWeight);
       pdf.setFontSize(10);
 
-      const indent = 10;
-      const textWidth = contentWidth - indent;
-      const lines = pdf.splitTextToSize(text, textWidth);
-      const height = lines.length * 4;
+      const fullText = num ? `${num}        ${text}` : text;
+      const lines = pdf.splitTextToSize(fullText, contentWidth);
+      const height = lines.length * 4.5;
 
       if (currentY + height > pdfHeight - footerHeight - 10) {
         pdf.addPage();
@@ -540,9 +549,8 @@ try {
         currentY = margin + 25;
       }
 
-      pdf.text(num, margin, currentY);
-      pdf.text(lines, margin + indent, currentY, { align: align, maxWidth: textWidth });
-      currentY += height + 1.5;
+      pdf.text(lines, margin, currentY, { align: align, maxWidth: contentWidth });
+      currentY += height + 1;
     };
 
     const customerName = offerData.recipient.name;
@@ -603,7 +611,7 @@ try {
     currentY += 1;
 
     addSectionTitle('8.', 'Terms of payment');
-    addParagraph('8.1', "If Internal: 30 days after delivery.\nIf Intercompany: According to the Intercompany Settlement.\nIf External: Needs to be defined.", 'left');
+    addParagraph('', "If Internal: 30 days after delivery.\nIf Intercompany: According to the Intercompany Settlement.\nIf External: Needs to be defined.", 'left');
 
     currentY += 1;
 
