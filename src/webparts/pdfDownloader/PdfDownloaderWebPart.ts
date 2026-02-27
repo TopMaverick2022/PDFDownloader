@@ -7,7 +7,7 @@ import {
 } from '@microsoft/sp-property-pane';
 import { BaseClientSideWebPart } from '@microsoft/sp-webpart-base';
 import { IReadonlyTheme } from '@microsoft/sp-component-base';
-
+import { sp } from "@pnp/sp/presets/all";
 import * as strings from 'PdfDownloaderWebPartStrings';
 import PdfDownloader from './components/PdfDownloader';
 import { IPdfDownloaderProps } from './components/IPdfDownloaderProps';
@@ -37,6 +37,11 @@ export default class PdfDownloaderWebPart extends BaseClientSideWebPart<IPdfDown
   }
 
   protected onInit(): Promise<void> {
+    sp.setup({
+      sp: {
+        baseUrl: this.context.pageContext.web.absoluteUrl
+      }
+    })
     return this._getEnvironmentMessage().then(message => {
       this._environmentMessage = message;
     });

@@ -6,6 +6,7 @@ import autoTable from 'jspdf-autotable';
 import { PrimaryButton } from '@fluentui/react';
 import { IPdfDownloaderProps } from './IPdfDownloaderProps';
 import { IOfferData } from './IOfferData';
+import { sp } from "@pnp/sp/presets/all";
 import { IPricelistData, IPricelistItem, IParsedDetails } from './IPricelistData';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -67,19 +68,19 @@ const offerData: IOfferData = {
 };
 
 const tocItems = [
-    { no: 1, title: 'Pricelist', page: 3 },
-    { no: 2, title: 'Prices', page: 4 },
-    { no: 3, title: 'Production facility cables', page: 5 },
-    { no: 4, title: '(if delivery outside of Germany) Export Regulations', page: 5 },
-    { no: 5, title: 'Delivery', page: 5 },
-    { no: 6, title: 'Delivery period', page: 5 },
-    { no: 7, title: 'Prices', page: 5 },
-    { no: 8, title: 'Terms of payment', page: 5 },
-    { no: 9, title: 'Metal Adjustment', page: 6 },
-    { no: 10, title: 'Warranty', page: 6 },
-    { no: 11, title: 'Limitation of Liability', page: 6 },
-    { no: 12, title: 'Validity', page: 7 },
-    { no: 13, title: 'Contact', page: 7 },
+  { no: 1, title: 'Pricelist', page: 3 },
+  { no: 2, title: 'Prices', page: 4 },
+  { no: 3, title: 'Production facility cables', page: 5 },
+  { no: 4, title: '(if delivery outside of Germany) Export Regulations', page: 5 },
+  { no: 5, title: 'Delivery', page: 5 },
+  { no: 6, title: 'Delivery period', page: 5 },
+  { no: 7, title: 'Prices', page: 5 },
+  { no: 8, title: 'Terms of payment', page: 5 },
+  { no: 9, title: 'Metal Adjustment', page: 6 },
+  { no: 10, title: 'Warranty', page: 6 },
+  { no: 11, title: 'Limitation of Liability', page: 6 },
+  { no: 12, title: 'Validity', page: 7 },
+  { no: 13, title: 'Contact', page: 7 },
 ];
 
 const originalPricelistItems: IPricelistItem[] = [
@@ -129,30 +130,30 @@ const parseDetails = (details: string[] | undefined): IParsedDetails => {
 
   for (let i = 0; i < details.length; i++) {
     const detail = details[i];
-    
-    if (detail.includes(':')) {
-        const parts = detail.split(':');
-        const key = parts[0].trim();
-        const value = parts.slice(1).join(':').trim();
 
-        if (detailMappings[key]) {
-            parsed[detailMappings[key]] = value;
-        } else if (key.toLowerCase() === 'cu') {
-            if (!parsed.metalContent) {
-                parsed.metalContent = detail;
-            }
+    if (detail.includes(':')) {
+      const parts = detail.split(':');
+      const key = parts[0].trim();
+      const value = parts.slice(1).join(':').trim();
+
+      if (detailMappings[key]) {
+        parsed[detailMappings[key]] = value;
+      } else if (key.toLowerCase() === 'cu') {
+        if (!parsed.metalContent) {
+          parsed.metalContent = detail;
         }
+      }
     } else {
-        if (detail === 'Bonding Cable watertight') {
-            parsed.cableType = detail;
-        } else if (detail === 'Stock cable - subject to prior sale') {
-            parsed.saleType = detail;
-        } else if (detail === 'Metal Content') {
-            if (i + 1 < details.length) {
-                parsed.metalContent = details[i + 1];
-                i++; // consume next item
-            }
+      if (detail === 'Bonding Cable watertight') {
+        parsed.cableType = detail;
+      } else if (detail === 'Stock cable - subject to prior sale') {
+        parsed.saleType = detail;
+      } else if (detail === 'Metal Content') {
+        if (i + 1 < details.length) {
+          parsed.metalContent = details[i + 1];
+          i++; // consume next item
         }
+      }
     }
   }
   return parsed;
@@ -169,7 +170,19 @@ const pricelistData: IPricelistData = {
 
 const PdfDownloader: React.FC<IPdfDownloaderProps> = (): React.ReactElement<IPdfDownloaderProps> => {
   const [isContentReady, setIsContentReady] = useState(false);
-  
+  const [enquiry, setEnquiry] = useState<any>([]);
+  const [Price,setPrice] = useState<any>([]);
+  const [productionFacilityCables, setProductionFacilityCables] = useState<any>([]);
+  const [exportRegulations, setExportRegulations] = useState<any>([]);
+  const [delivery, setDelivery] = useState<any>([]);
+  const [deliveryPeriod, setDeliveryPeriod] = useState<any>([]);
+  const [prices1, setPrices1] = useState<any>([]);
+  const [metalAdjustment, setMetalAdjustment] = useState<any>([]);
+  const [warranty, setWarranty] = useState<any>([]);
+  const [limitationOfLiability, setLimitationOfLiability] = useState<any>([]);
+  const [validity, setValidity] = useState<any>([]);
+  const [contact, setContact] = useState<any>([]);
+  const [automatic, setAutomatic] = useState<any>([]);
   const parsedPricelistItems = useMemo(() => {
     const parsedItems = originalPricelistItems.map(item => ({
       ...item,
@@ -183,10 +196,53 @@ const PdfDownloader: React.FC<IPdfDownloaderProps> = (): React.ReactElement<IPdf
     img.src = headerLogo;
     img.onload = () => setIsContentReady(true);
     img.onerror = () => {
-        console.error("Failed to load header logo for PDF generation.");
-        setIsContentReady(true);
+      console.error("Failed to load header logo for PDF generation.");
+      setIsContentReady(true);
     }
+    onLoad();
   }, []);
+
+  // const onLoad = async (): Promise<void> => {
+  //   let data = await sp.web.lists.getByTitle('OfferTemplate').items.select('*').get();
+  //   console.log('Fetched data from SharePoint list:', data);
+  //   let res = data.filter(data => data.Title == "Prices")
+  //   console.log('Filtered data for Title "Price":', res);
+  //   setPrice(res[0].Description)
+    
+  // }
+const onLoad = async (): Promise<void> => {
+try {
+      const items: { Title: string, Description: string, DescriptionRichText: string }[] = await sp.web.lists.getByTitle('OfferTemplate').items.select('Title', 'Description', 'DescriptionRichText').get();
+      console.log('Fetched data from SharePoint list:', items);
+
+      // A map for title to state setter function
+      const stateSetterMap: { [key: string]: (value: any) => void } = {
+        "Prices": setPrice,
+        "Production facility cables": setProductionFacilityCables,
+        "(if delivery outside of Germany) Export Regulations": setExportRegulations,
+        "Delivery": setDelivery,
+        "Delivery period": setDeliveryPeriod,
+        "Metal Adjustment": setMetalAdjustment,
+        "Warranty": setWarranty,
+        "Limitation of Liability": setLimitationOfLiability,
+        "Validity": setValidity,
+        "Contact": setContact,
+        "Enquiry": setEnquiry, 
+        "Automatic": setAutomatic,       
+        "Prices1": setPrices1,
+      };
+      for (const item of items) {
+        console.log(`Title: ${item.Title}, Description: ${item.Description}`);
+        if (stateSetterMap[item.Title]) {
+          stateSetterMap[item.Title]([item]);
+          
+        }
+      }
+    } catch (error) {
+      console.error("Failed to fetch data from SharePoint list:", error);
+    }
+  };
+
 
   const handleDownload = React.useCallback(async (): Promise<void> => {
     const pdf = new jsPDF('p', 'mm', 'a4');
@@ -195,6 +251,7 @@ const PdfDownloader: React.FC<IPdfDownloaderProps> = (): React.ReactElement<IPdf
     const margin = 15;
     const footerHeight = 20;
     const lineHeight = 5;
+    const contentWidth = pdfWidth - margin * 2;
 
     const logoWidth = 45;
     const rightColX = pdfWidth - margin - logoWidth;
@@ -218,9 +275,9 @@ const PdfDownloader: React.FC<IPdfDownloaderProps> = (): React.ReactElement<IPdf
       pdf.text(`Page ${pageNumber} / ${totalPages}`, pdfWidth - margin, footerY + lineHeight, { align: 'right', baseline: 'bottom' });
     };
 
-        const addPage1Footer = (totalPages: number): void => {
+    const addPage1Footer = (totalPages: number): void => {
       const footerY = pdfHeight - footerHeight - 4;
-      
+
       pdf.setLineWidth(0.2);
       pdf.line(margin, footerY - 4, pdfWidth - margin, footerY - 4);
 
@@ -250,7 +307,7 @@ const PdfDownloader: React.FC<IPdfDownloaderProps> = (): React.ReactElement<IPdf
       pdf.text('No. HRA 30677 · VAT Reg. No. DE 815 517 191', col2X, y);
       y += lineSpacing;
       pdf.text('Tax-No.: 218/5728/1753', col2X, y);
-      
+
       y = footerY;
       pdf.text('Personally Liable Partner:', col3X, y);
       y += lineSpacing;
@@ -269,7 +326,7 @@ const PdfDownloader: React.FC<IPdfDownloaderProps> = (): React.ReactElement<IPdf
     // Sender line
     pdf.setFontSize(8);
     pdf.text(offerData.sender.line1, margin, 35);
-    
+
     // Recipient
     let y = 45;
     pdf.setFontSize(10);
@@ -283,15 +340,15 @@ const PdfDownloader: React.FC<IPdfDownloaderProps> = (): React.ReactElement<IPdf
     y += lineHeight;
     pdf.text(offerData.recipient.country, margin, y);
 
-    
+
     let rightY = margin + 20;
-    
+
     const drawRightColText = (text: string, isBold = false): void => {
       pdf.setFont('helvetica', isBold ? 'bold' : 'normal');
       pdf.text(text, rightColX, rightY);
       rightY += lineHeight;
     };
-    
+
     drawRightColText(offerData.companyInfo.name, true);
     drawRightColText(offerData.companyInfo.address1);
     drawRightColText(offerData.companyInfo.zipCity);
@@ -312,7 +369,7 @@ const PdfDownloader: React.FC<IPdfDownloaderProps> = (): React.ReactElement<IPdf
     drawRightColText(offerData.reference.value);
     drawRightColText(offerData.reference.revision);
     drawRightColText(offerData.reference.note);
-    
+
     y = Math.max(y, rightY) + 5;
     pdf.setFont('helvetica', 'normal');
     pdf.setFontSize(10);
@@ -325,15 +382,57 @@ const PdfDownloader: React.FC<IPdfDownloaderProps> = (): React.ReactElement<IPdf
     pdf.setFontSize(10);
     pdf.setFont('helvetica', 'normal');
     pdf.text(offerData.offer.subtitlePrefix + offerData.offer.projectReference, margin, y);
-    
+
     y += 15;
     pdf.text(offerData.greeting.salutation + offerData.greeting.recipientName, margin, y);
     y += 10;
-    pdf.text(offerData.body1.enquiryPrefix + offerData.body1.enquiryDate, margin, y);
-    y += 5;
-    pdf.text(offerData.body2, margin, y);
-    y += 10;
-    pdf.text(offerData.body3, margin, y);
+    
+    // Helper functions for text processing
+    const getText = (state: any): string => {
+      if (Array.isArray(state) && state.length > 0 && state[0] && typeof state[0].Description === 'string') {
+        return state[0].Description;
+      } else if (typeof state === 'string') {
+        return state;
+      }
+      return '';
+    };
+
+    const getRichText = (state: any): string => {
+      if (Array.isArray(state) && state.length > 0 && state[0] && typeof state[0].DescriptionRichText === 'string') {
+        return state[0].DescriptionRichText;
+      }
+      return '';
+    };
+
+    const replaceVars = (text: string): string => {
+      if (!text) return '';
+      return text
+        .replace(/\$\{customerName\}/g, customerName)
+        .replace(/\$\{supplierName\}/g, supplierName)
+        .replace(/\$\{deliveryTerms\}/g, deliveryTerms)
+        .replace(/\$\{destinationSite\}/g, destinationSite)
+        .replace(/\$\{recipientName\}/g, recipientName)
+        .replace(/\$\{stockItems\}/g, stockItems)
+        .replace(/\$\{stockDeliveryTime\}/g, stockDeliveryTime)
+        .replace(/\$\{productionItems\}/g, productionItems)
+        .replace(/\$\{productionDeliveryTime\}/g, productionDeliveryTime)
+        .replace(/\$\{copperPrice\}/g, copperPrice)
+        .replace(/\$\{exchangeRate\}/g, exchangeRate)
+        .replace(/\$\{dateTodayMinus1\}/g, dateTodayMinus1)
+        .replace(/\$\{validityDate\}/g, validityDate)
+        .replace(/\$\{contact1Name\}/g, contact1Name)
+        .replace(/\$\{contact1Mobile\}/g, contact1Mobile)
+        .replace(/\$\{contact1Email\}/g, contact1Email)
+        .replace(/\$\{contact2Name\}/g, contact2Name)
+        .replace(/\$\{contact2Mobile\}/g, contact2Mobile)
+        .replace(/\$\{contact2Email\}/g, contact2Email)
+        .replace(/\$\{enquiryDate\}/g, enquiryDate);
+    };
+    
+    const enquiryContent = replaceVars(getText(enquiry));
+    const enquiryLines = pdf.splitTextToSize(enquiryContent, contentWidth);
+    pdf.text(enquiryLines, margin, y);
+    y += enquiryLines.length * lineHeight;
     y += 5;
     offerData.items.forEach(item => {
       y += 5;
@@ -387,19 +486,19 @@ const PdfDownloader: React.FC<IPdfDownloaderProps> = (): React.ReactElement<IPdf
     tableBody.push(['', 'TOTAL - Project', '', '', '', '', formattedTotal]);
 
     autoTable(pdf, {
-        head: [['Item-No.', 'Description', 'Drawing', 'Qty.', 'Unit', 'Unit Price EUR', 'Total EUR']],
-        body: tableBody,
-        theme: 'grid',
-        startY: margin + 25,
-        margin: { top: 40, bottom: 30, left: margin, right: margin },
-        headStyles: { fontStyle: 'bold', fillColor: [255, 255, 255], textColor: [0, 0, 0], lineWidth: 0.1, lineColor: [0, 0, 0] },
-        styles: { lineColor: [0, 0, 0], lineWidth: 0.1, textColor: [0, 0, 0] },
-        didDrawPage: (data) => addPageHeader(),
-        columnStyles: {
-          3: { halign: 'right' },
-          5: { halign: 'right' },
-          6: { halign: 'right' }
-        },
+      head: [['Item-No.', 'Description', 'Drawing', 'Qty.', 'Unit', 'Unit Price EUR', 'Total EUR']],
+      body: tableBody,
+      theme: 'grid',
+      startY: margin + 25,
+      margin: { top: 40, bottom: 30, left: margin, right: margin },
+      headStyles: { fontStyle: 'bold', fillColor: [255, 255, 255], textColor: [0, 0, 0], lineWidth: 0.1, lineColor: [0, 0, 0] },
+      styles: { lineColor: [0, 0, 0], lineWidth: 0.1, textColor: [0, 0, 0] },
+      didDrawPage: (data) => addPageHeader(),
+      columnStyles: {
+        3: { halign: 'right' },
+        5: { halign: 'right' },
+        6: { halign: 'right' }
+      },
     });
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -411,125 +510,39 @@ const PdfDownloader: React.FC<IPdfDownloaderProps> = (): React.ReactElement<IPdf
     // --- ADDITIONAL CONTENT PAGES ---
     pdf.addPage();
     addPageHeader();
-    
+
     let currentY = margin + 25;
-    const contentWidth = pdfWidth - margin * 2;
 
     const addSectionTitle = (num: string, title: string): void => {
-        pdf.setFont('helvetica', 'bold');
-        pdf.setFontSize(11);
-        if (currentY + 10 > pdfHeight - footerHeight - 10) {
-            pdf.addPage();
-            addPageHeader();
-            currentY = margin + 25;
-        }
-        pdf.text(`${num} ${title}`, margin, currentY);
-        currentY += 7;
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(11);
+      if (currentY + 10 > pdfHeight - footerHeight - 10) {
+        pdf.addPage();
+        addPageHeader();
+        currentY = margin + 25;
+      }
+      pdf.text(`${num} ${title}`, margin, currentY);
+      currentY += 7;
     };
 
     const addParagraph = (num: string, text: string, align: 'left' | 'justify' = 'justify', fontWeight: 'normal' | 'bold' = 'normal'): void => {
-        pdf.setFont('helvetica', fontWeight);
-        pdf.setFontSize(10);
-        
-        const indent = 10;
-        const textWidth = contentWidth - indent;
-        const lines = pdf.splitTextToSize(text, textWidth);
-        const height = lines.length * 4; // 4mm line height to match render
-        
-        if (currentY + height > pdfHeight - footerHeight - 10) {
-            pdf.addPage();
-            addPageHeader();
-            currentY = margin + 25;
-        }
-        
-        pdf.text(num, margin, currentY);
-        pdf.text(lines, margin + indent, currentY, { align: align, maxWidth: textWidth });
-        currentY += height + 1.5; // Reduced spacing
-    };
+      pdf.setFont('helvetica', fontWeight);
+      pdf.setFontSize(10);
 
-    const addRichText = (num: string, textParts: (string | { text: string, url: string })[]): void => {
-        pdf.setFont('helvetica', 'normal');
-        pdf.setFontSize(10);
-        const indent = 10;
-        const maxWidth = contentWidth - indent;
-        const lineHeight = 4;
+      const indent = 10;
+      const textWidth = contentWidth - indent;
+      const lines = pdf.splitTextToSize(text, textWidth);
+      const height = lines.length * 4;
 
-        if (currentY + lineHeight > pdfHeight - footerHeight - 10) {
-            pdf.addPage();
-            addPageHeader();
-            currentY = margin + 25;
-        }
+      if (currentY + height > pdfHeight - footerHeight - 10) {
+        pdf.addPage();
+        addPageHeader();
+        currentY = margin + 25;
+      }
 
-        pdf.text(num, margin, currentY);
-        
-        let currentLine: { text: string, url?: string }[] = [];
-        let currentLineWidth = 0;
-        
-        const flushLine = (): void => {
-             let x = margin + indent;
-             currentLine.forEach(part => {
-                 if (part.url) {
-                     pdf.setTextColor(0, 0, 255);
-                     pdf.text(part.text, x, currentY);
-                     const w = pdf.getTextWidth(part.text);
-                     pdf.line(x, currentY + 1, x + w, currentY + 1); // Manual underline
-                     pdf.link(x, currentY - lineHeight + 1.5, w, lineHeight, { url: part.url });
-                     pdf.setTextColor(0, 0, 0);
-                 } else {
-                     pdf.text(part.text, x, currentY);
-                 }
-                 x += pdf.getTextWidth(part.text);
-             });
-             currentY += lineHeight;
-             currentLine = [];
-             currentLineWidth = 0;
-             
-             if (currentY > pdfHeight - footerHeight - 10) {
-                 pdf.addPage();
-                 addPageHeader();
-                 currentY = margin + 25;
-             }
-        };
-
-        textParts.forEach(part => {
-            const str = typeof part === 'string' ? part : part.text;
-            const url = typeof part === 'string' ? undefined : part.url;
-            
-            // Split by words to wrap
-            const words = str.split(/(\s+)/);
-            words.forEach(word => {
-                if (word === '') return;
-                // Handle explicit newlines if any
-                if (word.includes('\n')) {
-                    const subWords = word.split('\n');
-                    subWords.forEach((sw, idx) => {
-                        if (sw) {
-                             const w = pdf.getTextWidth(sw);
-                             if (currentLineWidth + w > maxWidth) {
-                                 flushLine();
-                             }
-                             currentLine.push({ text: sw, url: url });
-                             currentLineWidth += w;
-                        }
-                        if (idx < subWords.length - 1) {
-                            flushLine();
-                        }
-                    });
-                    return;
-                }
-                
-                const w = pdf.getTextWidth(word);
-                if (currentLineWidth + w > maxWidth) {
-                    flushLine();
-                    // If word is space at start of line, skip
-                    if (/^\s+$/.test(word)) return;
-                }
-                currentLine.push({ text: word, url: url });
-                currentLineWidth += w;
-            });
-        });
-        if (currentLine.length > 0) flushLine();
-        currentY += 1.5;
+      pdf.text(num, margin, currentY);
+      pdf.text(lines, margin + indent, currentY, { align: align, maxWidth: textWidth });
+      currentY += height + 1.5;
     };
 
     const customerName = offerData.recipient.name;
@@ -539,6 +552,7 @@ const PdfDownloader: React.FC<IPdfDownloaderProps> = (): React.ReactElement<IPdf
     const recipientName = offerData.recipient.name;
     const stockItems = 'item 1.1.1 and 1.1.2 A1';
     const stockDeliveryTime = '4 weeks';
+    const enquiryDate = offerData.body1.enquiryDate;
     const productionItems = 'item 1.1.2';
     const productionDeliveryTime = '34 weeks';
     const copperPrice = "13.310,00 USD/t";
@@ -553,38 +567,38 @@ const PdfDownloader: React.FC<IPdfDownloaderProps> = (): React.ReactElement<IPdf
     const contact2Email = "Oliver.Sablic@nkt.com";
 
     addSectionTitle('2.', 'Prices');
-    addParagraph('2.1', `The prices offered are only valid in case ${customerName} purchases the entire quantity of the goods offered. In the event that ${customerName} decides to order less or more in relation to the offered quantity of goods, NKT reserves the right to adjust the prices for the then agreed delivery quantity.`);
-    addParagraph('2.2', 'Cable drums are included in the contract price.');
-    addParagraph('2.3', `All duties, fees, customs duties and non-German taxes shall be borne by ${customerName}.`);
-    addParagraph('2.4', "Termination or cancellation of the contract requires NKT's approval and an agreement by the parties on the compensation due to NKT in this case.");
-    
+    const priceContent = replaceVars(getText(Price));
+    if (priceContent) addParagraph('', priceContent);
+
     currentY += 1;
 
     addSectionTitle('3.', 'Production facility cables');
-    addParagraph('3.1', `In the event of an order, we reserve the right to supply the cable from our NKT supply chain partners ${supplierName}.`);
+    const prodContent = replaceVars(getText(productionFacilityCables));
+    if (prodContent) addParagraph('', prodContent);
 
     currentY += 1;
 
     addSectionTitle('4.', '(if delivery outside of Germany) Export Regulations');
-    addParagraph('4.1', `According to German Export Regulations as well as other national rulings, the export or import of material offered here might be subject to the approval of the German Authorities (Bundesausfuhramt – BAFA) or other national administrative authorities. Therefore, NKT and ${customerName} agree that any non-delivery or late delivery based on missing approval of responsible authorities, such as German export control authorities, is not subject to any ruling for delay or any other claim against NKT.`);
+    const exportContent = replaceVars(getText(exportRegulations));
+    if (exportContent) addParagraph('', exportContent);
 
     currentY += 1;
 
     addSectionTitle('5.', 'Delivery');
-    addParagraph('5.1', `The cables shall be delivered by NKT to the agreed installation site. Delivery shall occur in accordance with ${deliveryTerms} (INCOTERMS 2020). The destination site is: ${destinationSite}. Upon delivery of the cables, their integrity must be checked by the parties and confirmed to NKT by ${recipientName}. The unloading destination and in particular the installation site must be accessible for heavy duty transports.`);
+    const deliveryContent = replaceVars(getText(delivery));
+    if (deliveryContent) addParagraph('', deliveryContent);
 
     currentY += 1;
 
     addSectionTitle('6.', 'Delivery period');
-    addParagraph('6.1', `The bonding cable(s) available in stock, according to chapter 3 Pricelist, (${stockItems} - subject to prior sales) can be delivered approx. ${stockDeliveryTime} after order confirmation. The bonding cable(s) ${productionItems} can be delivered approx. ${productionDeliveryTime} after order confirmation, subject to technical and commercial clarification (depending on the availability of ships and sea routes).`);
+    const deliveryPeriodContent = replaceVars(getText(deliveryPeriod));
+    if (deliveryPeriodContent) addParagraph('', deliveryPeriodContent);
 
     currentY += 1;
 
     addSectionTitle('7.', 'Prices');
-    addParagraph('7.1', `The prices offered are only valid in case ${customerName} purchases the entire quantity of the goods offered. In the event that ${customerName} decides to order less or more in relation to the offered quantity of goods, NKT reserves the right to adjust the prices for the then agreed delivery quantity.`);
-    addParagraph('7.2', 'Cable drums are included in the contract price.');
-    addParagraph('7.3', `All duties, fees, customs duties and non- German taxes shall be borne by ${customerName}.`);
-    addParagraph('7.4', "Termination or cancellation of the contract requires NKT's approval and an agreement by the parties on the compensation due to NKT in this case.");
+    const prices1Content = replaceVars(getText(prices1));
+    if (prices1Content) addParagraph('', prices1Content);
 
     currentY += 1;
 
@@ -594,80 +608,62 @@ const PdfDownloader: React.FC<IPdfDownloaderProps> = (): React.ReactElement<IPdf
     currentY += 1;
 
     addSectionTitle('9.', 'Metal Adjustment');
-    addParagraph('9.1', "Depending on the cable type offered, NKT’s products contain metals such as Copper, Aluminium or Lead. These metals are exchange-traded. Due to strong market fluctuations, it is common practice to adjust the final cable price based on the metal prices valid at the time of placing the order. This is meant to provide transparency and enables NKT to submit offers without adding any risk surcharge In the following a detailed description of this procedure and of the metals contained in NKT’s product is indicated.");
-    
-    addRichText('9.2', [
-        "The cable prices quoted in our offer are prices inclusive non-ferrous metals (full-prices) based on\n",
-        `Copper (M1Cu): ${copperPrice}\n`,
-        "Official LME-Cash Seller & Settlement Price\n",
-        "as published on ",
-        { text: "http://www.lme.com/metals/non-ferrous/", url: "http://www.lme.com/metals/non-ferrous/" },
-        ` and an exchange rate (Bloomberg Fixing BFIX) of US$ = ${exchangeRate} / EUR as published on `,
-        { text: "https://www.bloomberg.com/markets/currencies/fx-fixings", url: "https://www.bloomberg.com/markets/currencies/fx-fixings" },
-        `\non  ${dateTodayMinus1}.`
-    ]);
-
-    addParagraph('9.3', "Non-ferrous metal prices (Cash Seller & Settlement) will be charged as published by the London Metal Exchange in the afternoon of the day following the receipt of the clarified order. They will be converted into EUR/t with the exchange rate (BFIX) as published in the afternoon of the day following the receipt of the clarified order.");
-
-    addParagraph('9.4', "The following formula is applied for calculating the price difference (PD):\n\nPD = (M2Cu-M1Cu) x FCu\n\nPD: price difference (EUR/km)\nM1Cu: metal price on which offer is based EUR/t\nM2Cu: metal price in EUR/t at the time of order as mentioned above (as described above and converted to Euros based on the relevant exchange rate US$/EUR)\nFCu: variation factor Copper (see pricing sheet)", 'left');
-
-    addParagraph('9.5', "NKT will always cover the exact quantity of non-ferrous metals needed for the manufacturing of the products ordered.");
-    addParagraph('9.6', `Should an order be cancelled or quantities reduced after covering the non-ferrous metals prices, NKT has to sell the surplus of non-ferrous metals purchased at the valid market price. Should there be a price difference, this will be settled between ${customerName} and NKT.`);
-    addParagraph('9.7', "Should the order volume be increased after fixing the metal price NKT shall cover the additionally needed extra non-ferrous metals according to the rules described above.");
+    const metalContent = replaceVars(getText(metalAdjustment));
+    if (metalContent) addParagraph('', metalContent);
 
     currentY += 1;
 
     addSectionTitle('10.', 'Warranty');
-    addParagraph('10.1', "NKT shall be liable for defects which occur within 24 months after the respective transfer of risk, but no later than 28 months after receipt of dispatch notice.");
+    const warrantyContent = replaceVars(getText(warranty));
+    if (warrantyContent) addParagraph('', warrantyContent);
 
     currentY += 1;
 
     addSectionTitle('11.', 'Limitation of Liability');
-    addParagraph('11.1', "NKT's overall liability arising out of or in connection with this contract is limited to 10% of the original total net contract value. This includes, but is not limited to, claims arising from liability for defects, statutory claims, claims arising from termination and contractual penalties for delay, etc.");
-    addParagraph('11.2', "NKT's liability for loss of profit, loss of business opportunities, loss of electrical energy, operational interruption, loss of production, increased financing or capital costs, damages which do not affect the goods itself (e.g. claims of third parties) as well as other consequential damages, are excluded.");
-    addParagraph('11.3', "The above limitation of liability shall not apply in cases of damage caused intentionally or by gross negligence and in cases in which liability cannot be limited due to mandatory law, in particular due to injury to life, body or health. In such cases, NKT's liability is unlimited.");
+    const liabilityContent = replaceVars(getText(limitationOfLiability));
+    if (liabilityContent) addParagraph('', liabilityContent);
 
     currentY += 1;
 
     addSectionTitle('12.', 'Validity');
-    addParagraph('12.1', `This offer is valid until ${validityDate}. Accordingly, our prices and the times stated are only valid up to this date.`);
+    const validityContent = replaceVars(getText(validity));
+    if (validityContent) addParagraph('', validityContent);
 
     currentY += 1;
 
     addSectionTitle('13.', 'Contact');
-    addParagraph('', `${contact1Name} will be the contact person of NKT for commercial issues and can be reached at the following telephone numbers and addresses:`);
-    addParagraph('', `Mobile: ${contact1Mobile}`, 'left');
-    addRichText('', ['E-Mail: ', { text: contact1Email, url: `mailto:${contact1Email}` }]);
-    
-    currentY += 1;
+    const contactContent = replaceVars(getText(contact));
+    if (contactContent) addParagraph('', contactContent);
 
-    addParagraph('', `${contact2Name} will be the contact person of NKT for technical issues and can be reached at the following telephone numbers and addresses:`);
-    addParagraph('', `Mobile: ${contact2Mobile}`, 'left');
-    addRichText('', ['E-Mail: ', { text: contact2Email, url: `mailto:${contact2Email}` }]);
+    const automaticRichContent = replaceVars(getRichText(automatic));
+    if (automaticRichContent) addParagraph('', automaticRichContent, 'left', 'bold');
 
-    addParagraph('', 'Best wishes from the NKT team.', 'left','bold');
-    
     currentY += 20;
 
-    addParagraph('',' This offer was automatically created and is valid without signature.');
+    const automaticContent = replaceVars(getText(automatic));
+    if (automaticContent) addParagraph('', automaticContent);
     // Add footers to all pages
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const totalPages = (pdf as any).internal.getNumberOfPages();
     pdf.setPage(1);
     addPage1Footer(totalPages);
-    for(let i = 2; i <= totalPages; i++) {
-        pdf.setPage(i);
-        addGenericFooter(i, totalPages);
+    for (let i = 2; i <= totalPages; i++) {
+      pdf.setPage(i);
+      addGenericFooter(i, totalPages);
     }
-    
+
     pdf.save('NKT-Offer.pdf');
-  }, [parsedPricelistItems]);
+  }, [
+    parsedPricelistItems, enquiry, Price, productionFacilityCables,
+    exportRegulations, delivery, deliveryPeriod, prices1, metalAdjustment,
+    warranty, limitationOfLiability, validity, contact, automatic
+  ]);
 
   return (
     <section className={styles.pdfDownloader}>
-      <PrimaryButton 
-        onClick={handleDownload} 
-        text={isContentReady ? "Download as PDF" : "Loading..."} 
+      <PrimaryButton
+        onClick={handleDownload}
+        text={isContentReady ? "Download as PDF" : "Loading..."}
         disabled={!isContentReady}
         styles={{
           root: { backgroundColor: '#0078d4', borderColor: '#0078d4' },
