@@ -331,7 +331,8 @@ const PdfDownloader: React.FC<IPdfDownloaderProps> = (): React.ReactElement<IPdf
       if (!html) return '';
       const htmlWithNewlines = html.replace(/<br\s*\/?>/gi, '\n').replace(/<\/p>/gi, '\n').replace(/<\/div>/gi, '\n');
       const doc = new DOMParser().parseFromString(htmlWithNewlines, 'text/html');
-      return doc.body.textContent || "";
+      // convert tabs to spaces for consistent indentation
+      return (doc.body.textContent || "").replace(/\t/g, ' ');
     };
 
     const getText = (state: ISharePointListItem[]): string => {
@@ -503,9 +504,20 @@ ${offerData.body3}`;
     y += bodyLines.length * lineHeight;
 
     y += 5;
+    // render list of items with bullet characters; manually handle wrapping
     offerData.items.forEach(item => {
       y += 5;
-      pdf.text(item, margin, y);
+      const bullet = '• ';
+      const indent = pdf.getTextWidth(bullet);
+      const lines = pdf.splitTextToSize(item, contentWidth - indent);
+      // first line includes bullet; justify across full width
+      pdf.text(bullet + lines[0], margin, y, { align: 'justify', maxWidth: contentWidth });
+      for (let i = 1; i < lines.length; i++) {
+        y += lineHeight;
+        pdf.text(lines[i], margin + indent, y, { align: 'justify', maxWidth: contentWidth - indent });
+      }
+      // spacing after each bullet item
+      y += 4;
     });
 
     // --- PAGE 2: TABLE OF CONTENTS ---
@@ -603,30 +615,63 @@ ${offerData.body3}`;
       currentY += 7;
     };
 
-    // Helper function to add content with proper flow
+    // Helper function to add content with proper flow and basic list formatting
     const addContent = (text: string): void => {
       if (!text) return;
-      
+
       pdf.setFont('arial', 'normal');
-      pdf.setFontSize(9);
-      
-      const lines = pdf.splitTextToSize(text, contentWidth);
+      pdf.setFontSize(10);
+
+      // split into paragraphs on any newline; individual numbered or bullet
+      // lines come through as their own paragraph so we can indent/space them
+      const paragraphs = text.split(/\n+/);
       const lineHeight_px = 4.5;
-      const paragraphHeight = lines.length * lineHeight_px;
-      
-      // Check if we need a new page for this content
-      if (currentY + paragraphHeight > pdfHeight - footerHeight - 15) {
-        pdf.addPage();
-        addPageHeader();
-        currentY = margin + 25;
-      }
-      
-      // Write the content
-      for (let i = 0; i < lines.length; i++) {
-        pdf.text(lines[i], margin, currentY + (i * lineHeight_px));
-      }
-      
-      currentY += paragraphHeight + 2;
+
+      paragraphs.forEach(paragraph => {
+        if (!paragraph.trim()) {
+          currentY += lineHeight_px; // preserve empty lines
+          return;
+        }
+
+        // detect a leading numbering such as "2.1 " or "10.2 " or a bullet character
+        const bulletMatch = paragraph.match(/^((?:[0-9]{1,2}\.[0-9]{1,2})|•)\s+/);
+        let indent = 0;
+        let body = paragraph;
+        if (bulletMatch) {
+          indent = pdf.getTextWidth(bulletMatch[1]);
+          body = paragraph.slice(bulletMatch[1].length);
+        }
+
+        const width = contentWidth - indent;
+        const lines = pdf.splitTextToSize(body, width);
+        const paragraphHeight = lines.length * lineHeight_px;
+
+        // page break check
+        if (currentY + paragraphHeight > pdfHeight - footerHeight - 15) {
+          pdf.addPage();
+          addPageHeader();
+          currentY = margin + 25;
+        }
+
+        // write the lines, applying indent to wrapped lines and keeping the
+        // bullet prefix on the first line
+        if (bulletMatch) {
+          // first line includes the bullet prefix and is left-aligned
+          pdf.text(bulletMatch[1] + lines[0], margin, currentY, { align: 'left', maxWidth: contentWidth });
+          let yOffset = lineHeight_px;
+          for (let i = 1; i < lines.length; i++) {
+            pdf.text(lines[i], margin + indent, currentY + yOffset, { align: 'justify', maxWidth: width });
+            yOffset += lineHeight_px;
+          }
+        } else {
+          // no bullet, justify entire paragraph
+          pdf.text(lines, margin, currentY, { align: 'justify', maxWidth: contentWidth });
+        }
+
+        currentY += paragraphHeight;
+        // add a bit of extra spacing after each paragraph/bullet group
+        currentY += bulletMatch ? 4 : 2;
+      });
     };
 
     // Section 2: Prices
