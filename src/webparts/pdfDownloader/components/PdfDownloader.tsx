@@ -998,10 +998,13 @@ if (metalContent) {
 
     // Automatic content
     const automaticContent = replaceVars(getRichText(automatic));
-    if (automaticContent) {
+    const automaticDescription = replaceVars(getText(automatic));
+
+    if (automaticContent || automaticDescription) {
       const lines = automaticContent.split('\n').filter(line => line.trim() !== '');
       const bestWishesLine = lines.find(line => line.includes("Best wishes"));
       const disclaimerLine = lines.find(line => line.includes("automatically created"));
+      const otherLines = lines.filter(line => !line.includes("Best wishes") && !line.includes("automatically created"));
 
       // Render "Best wishes" if found, then increment currentY
       if (bestWishesLine) {
@@ -1014,6 +1017,24 @@ if (metalContent) {
         pdf.text(bestWishesLine, margin, currentY);
         currentY += 5; // spacing after
         pdf.setFont('helvetica', 'normal');
+      }
+
+      // Render other lines (DescriptionRichText content) next to the email line (after Best wishes)
+      if (otherLines.length > 0) {
+        otherLines.forEach(line => {
+           addContent(line);
+        });
+      }
+
+      // Render Description content
+      if (automaticDescription) {
+        const descLines = pdf.splitTextToSize(automaticDescription, contentWidth);
+        const descY = pdfHeight - 50;
+        if (currentY > descY - 5) {
+          pdf.addPage();
+          addPageHeader();
+        }
+        pdf.text(descLines, margin, descY);
       }
 
       // Render disclaimer at the bottom of the current or a new page
