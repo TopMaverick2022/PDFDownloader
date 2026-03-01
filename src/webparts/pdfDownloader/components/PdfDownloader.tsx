@@ -857,14 +857,14 @@ if (metalContent) {
         { align: 'justify', maxWidth: contentWidth - numberColumnWidth }
       );
 
-      currentY += wrapped.length * lineHeight_px + 2;
+      currentY += wrapped.length * lineHeight_px + 1.5 ;
       return;
     }
 
     // 2️⃣ Handle centered formula
     if (line.startsWith('PD =')) {
       pdf.setFont('helvetica', 'normal');
-      pdf.text(line, pdfWidth / 2, currentY, { align: 'left' });
+      pdf.text(line, margin + 10, currentY);
       pdf.setFont('helvetica', 'normal');
       currentY += lineHeight_px + 3;
       return;
@@ -893,7 +893,7 @@ if (metalContent) {
         { align: 'left', maxWidth: contentWidth - keyColumnWidth }
       );
 
-      currentY += wrapped.length * lineHeight_px;
+      currentY += wrapped.length * lineHeight_px + 1.5;
       return;
     }
 
@@ -908,6 +908,29 @@ if (metalContent) {
       pdf.text(right, margin + 55, currentY);
 
       currentY += lineHeight_px + 1;
+      return;
+    }
+
+    if (line.startsWith('Official LME-Cash')) {
+      pdf.text(line, margin + 12, currentY);
+      currentY += lineHeight_px - 1;
+      return;
+    }
+
+    if (line.startsWith('as published on')) {
+      const wrapped = pdf.splitTextToSize(
+        line,
+        contentWidth - 12
+      );
+
+      pdf.text(
+        wrapped,
+        margin + 10,
+        currentY,
+        { align: 'justify', maxWidth: contentWidth - 12 }
+      );
+
+      currentY += wrapped.length * lineHeight_px + 2;
       return;
     }
 
