@@ -192,6 +192,7 @@ const PdfDownloader: React.FC<IPdfDownloaderProps> = (): React.ReactElement<IPdf
   const [validity, setValidity] = useState<ISharePointListItem[]>([]);
   const [contact, setContact] = useState<ISharePointListItem[]>([]);
   const [automatic, setAutomatic] = useState<ISharePointListItem[]>([]);
+  // const [termsOfPayment, setTermsOfPayment] = useState<ISharePointListItem[]>([]);
   
   const parsedPricelistItems = useMemo((): (IPricelistItem & { parsedDetails: IParsedDetails })[] => {
     const parsedItems = originalPricelistItems.map(item => ({
@@ -221,6 +222,7 @@ const PdfDownloader: React.FC<IPdfDownloaderProps> = (): React.ReactElement<IPdf
         "Enquiry": setEnquiry, 
         "Automatic": setAutomatic,       
         "Prices1": setPrices1,
+        // "Terms of payment": setTermsOfPayment,
       };
       
       for (const item of items) {
@@ -324,6 +326,13 @@ const PdfDownloader: React.FC<IPdfDownloaderProps> = (): React.ReactElement<IPdf
       pdf.text('Board of Management: Lukas Sidler · Anders', col3X, y);
       y += lineSpacing;
       pdf.text('Jensen · Wilhelmus Hendrikx', col3X, y);
+    };
+
+    const getTitle = (items: ISharePointListItem[], defaultTitle: string): string => {
+      if (items && items.length > 0 && items[0].Title) {
+        return items[0].Title;
+      }
+      return defaultTitle;
     };
 
     // Helper functions for text processing
@@ -736,37 +745,38 @@ ${offerData.body3}`;
     };
 
     // Section 2: Prices
-    addSectionTitle('2.', 'Prices');
+    addSectionTitle('2.', getTitle(Price, 'Prices'));
     const priceContent = replaceVars(getText(Price));
     if (priceContent) addContent(priceContent);
 
     // Section 3: Production facility cables
-    addSectionTitle('3.', 'Production facility cables');
+    addSectionTitle('3.', getTitle(productionFacilityCables, 'Production facility cables'));
     const prodContent = replaceVars(getText(productionFacilityCables));
     if (prodContent) addContent(prodContent);
 
     // Section 4: Export Regulations
-    addSectionTitle('4.', '(if delivery outside of Germany) Export Regulations');
+    addSectionTitle('4.', getTitle(exportRegulations, '(if delivery outside of Germany) Export Regulations'));
     const exportContent = replaceVars(getText(exportRegulations));
     if (exportContent) addContent(exportContent);
 
     // Section 5: Delivery
-    addSectionTitle('5.', 'Delivery');
+    addSectionTitle('5.', getTitle(delivery, 'Delivery'));
     const deliveryContent = replaceVars(getText(delivery));
     if (deliveryContent) addContent(deliveryContent);
 
     // Section 6: Delivery period
-    addSectionTitle('6.', 'Delivery period');
+    addSectionTitle('6.', getTitle(deliveryPeriod, 'Delivery period'));
     const deliveryPeriodContent = replaceVars(getText(deliveryPeriod));
     if (deliveryPeriodContent) addContent(deliveryPeriodContent);
 
     // Section 7: Prices
-    addSectionTitle('7.', 'Prices');
+    addSectionTitle('7.', getTitle(prices1, 'Prices'));
     const prices1Content = replaceVars(getText(prices1));
     if (prices1Content) addContent(prices1Content);
 
     // Section 8: Terms of payment
     addSectionTitle('8.', 'Terms of payment');
+    // addSectionTitle('8.', getTitle(termsOfPayment, 'Terms of payment'));
     
     // Special handling for Terms of payment with italic keys
     if (currentY > pdfHeight - footerHeight - 25) {
@@ -776,6 +786,7 @@ ${offerData.body3}`;
     }
 
     const addPaymentTerm = (label: string, text: string): void => {
+      pdf.setFontSize(10);
       pdf.setFont('helvetica', 'italic');
       pdf.text(label, margin, currentY);
       const labelWidth = pdf.getTextWidth(label);
@@ -804,7 +815,7 @@ ${offerData.body3}`;
     addPaymentTerm('If External:', ' Needs to be defined.');
 
     // Section 9: Metal Adjustment
-addSectionTitle('9.', 'Metal Adjustment');
+addSectionTitle('9.', getTitle(metalAdjustment, 'Metal Adjustment'));
 const metalContent = replaceVars(getText(metalAdjustment));
 
 if (metalContent) {
@@ -949,12 +960,12 @@ if (metalContent) {
 }
 
     // Section 10: Warranty
-    addSectionTitle('10.', 'Warranty');
+    addSectionTitle('10.', getTitle(warranty, 'Warranty'));
     const warrantyContent = replaceVars(getText(warranty));
     if (warrantyContent) addContent(warrantyContent);
 
     // Section 11: Limitation of Liability
-    addSectionTitle('11.', 'Limitation of Liability');
+    addSectionTitle('11.', getTitle(limitationOfLiability, 'Limitation of Liability'));
     const liabilityContent = replaceVars(getText(limitationOfLiability));
     if (liabilityContent) {
       // Split liability content into paragraphs
@@ -967,12 +978,12 @@ if (metalContent) {
     }
 
     // Section 12: Validity
-    addSectionTitle('12.', 'Validity');
+    addSectionTitle('12.', getTitle(validity, 'Validity'));
     const validityContent = replaceVars(getText(validity));
     if (validityContent) addContent(validityContent);
 
     // Section 13: Contact
-    addSectionTitle('13.', 'Contact');
+    addSectionTitle('13.', getTitle(contact, 'Contact'));
     const contactContent = replaceVars(getText(contact));
     if (contactContent) {
       // Split contact content into paragraphs
